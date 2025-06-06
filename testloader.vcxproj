@@ -134,7 +134,7 @@
     <ClCompile Include="src.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="hellshell.h" />
+    <ClInclude Include="shell.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="structs.h" />
   </ItemGroup>
@@ -142,7 +142,7 @@
     <ResourceCompile Include="testloader.rc" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="hellsgate.asm">
+    <MASM Include="gate.asm">
       <FileType>Document</FileType>
     </MASM>
   </ItemGroup>

