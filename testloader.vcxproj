@@ -24,6 +24,7 @@
     <ProjectGuid>{0625b5a6-9107-4023-b481-99b32b535acc}</ProjectGuid>
     <RootNamespace>testloader</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>LynxLoader</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
